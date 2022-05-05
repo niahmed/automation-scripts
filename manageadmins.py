@@ -19,6 +19,11 @@ Mandatory arguments:
                          -c find            Find organizations in scope accessible by a 
                                             specific admin
                          -c list            List administrators
+                         -c add_saml        Add a SAML Role
+                         -c delete_saml     Delete a SAML Role    
+                         -c find_saml       Find organizations ins cope accessible by a 
+                                            specific SAML Role
+                         -c list_saml       List SAML Roles
 
 Optional arguments:
   -a <admin email>     : Email of admin account to be added/deleted/matched. Required for 
@@ -209,7 +214,11 @@ def deleteOrganizationAdmin(p_apiKey, p_organizationId, p_adminId):
     success, errors, headers, response = merakiRequest(p_apiKey, "DELETE", endpoint, p_verbose=FLAG_REQUEST_VERBOSE)    
     return success, errors, headers, response
     
-    
+def getSamlRoles(p_apiKey, p_organizationId):
+    endpoint = "/organizations/%s/samlRoles" % p_organizationId
+    success, errors, headers, response = merakiRequest(p_apiKey, "GET", endpoint, p_verbose=FLAG_REQUEST_VERBOSE)    
+    return success, errors, headers, response 
+
 def log(text, filePath=None):
     logString = "%s -- %s" % (datetime.datetime.now(), text)
     print(logString)
@@ -338,7 +347,25 @@ def cmdList(p_apikey, p_orgList):
                 
     print(buffer)
         
+def cmdListSaml(p_apikey, p_orgList):
+    #lists all SAML Roles in specified orgs
     
+    if p_orgList is None:
+        return
+        
+    buffer = ""
+    
+    for org in p_orgList:
+        success, errors, headers, orgRoles = getSamlRoles(p_apikey, org["id"])
+        
+        if not orgRoles is None:
+            buffer += '\nRoles for org "%s"\n' % org["name"]
+            buffer += '%-30s %-20s\n' % ("role", "Org Privilege")
+            for role in orgRoles:
+                buffer += '%-30s %-20s\n' % (role['role'], role['orgAccess'])
+                
+    print(buffer)
+
 def main(argv):
     #initialize variables for command line arguments
     arg_apiKey      = ''
@@ -376,10 +403,10 @@ def main(argv):
         
     #fail invalid commands quickly, not to annoy user
     cleanCmd = arg_command.lower().strip()
-    if cleanCmd not in ['add', 'delete', 'find', 'list']:
+    if cleanCmd not in ['add', 'delete', 'find', 'list', 'list_saml']:
         killScript('Invalid command "%s"' % cleanCmd)
         
-    if arg_admin == '' and cleanCmd != 'list':
+    if arg_admin == '' and cleanCmd not in ['list', 'list_saml']:
         killScript('Command "%s" needs parameter -a <admin account>' % arg_command)
         
     if cleanCmd == 'add' and arg_name == '':
@@ -408,6 +435,8 @@ def main(argv):
         cmdFind(arg_apiKey, matchedOrgs, arg_admin)
     elif cleanCmd == 'list':
         cmdList(arg_apiKey, matchedOrgs)
+    elif cleanCmd == 'list_saml':
+        cmdListSaml(arg_apiKey, matchedOrgs)
     
 if __name__ == '__main__':
     main(sys.argv[1:])
