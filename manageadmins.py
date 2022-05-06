@@ -214,12 +214,12 @@ def deleteOrganizationAdmin(p_apiKey, p_organizationId, p_adminId):
     success, errors, headers, response = merakiRequest(p_apiKey, "DELETE", endpoint, p_verbose=FLAG_REQUEST_VERBOSE)    
     return success, errors, headers, response
     
-def getSamlRoles(p_apiKey, p_organizationId):
+def getOrganizationSamlRoles(p_apiKey, p_organizationId):
     endpoint = "/organizations/%s/samlRoles" % p_organizationId
     success, errors, headers, response = merakiRequest(p_apiKey, "GET", endpoint, p_verbose=FLAG_REQUEST_VERBOSE)    
     return success, errors, headers, response 
 
-def createSamlRoles(p_apiKey, p_organizationId, p_role, p_privilege):
+def createOrganizationSamlRole(p_apiKey, p_organizationId, p_role, p_privilege):
     endpoint = "/organizations/%s/samlRoles" % p_organizationId
     body = { 
         "role": p_role,
@@ -374,7 +374,7 @@ def cmdListSaml(p_apikey, p_orgList):
     buffer = ""
     
     for org in p_orgList:
-        success, errors, headers, orgRoles = getSamlRoles(p_apikey, org["id"])
+        success, errors, headers, orgRoles = getOrganizationSamlRoles(p_apikey, org["id"])
         
         if not orgRoles is None:
             buffer += '\nRoles for org "%s"\n' % org["name"]
@@ -394,12 +394,12 @@ def cmdAddSaml(p_apikey, p_orgs, p_role, p_privilege):
         return
     
     for org in p_orgs:
-        success, errors, headers, orgRoles = getSamlRoles(p_apikey, org["id"])
+        success, errors, headers, orgRoles = getOrganizationSamlRoles(p_apikey, org["id"])
         roleId   = roleIdForSAML(orgRoles, p_role)
         if not roleId is None:
             log('Skipping org "%s". Role already exists' % org["name"])
         else:
-            success, errors, headers, response = createSamlRoles(p_apikey, org["id"], p_role, p_privilege)
+            success, errors, headers, response = createOrganizationSamlRole(p_apikey, org["id"], p_role, p_privilege)
             if success:
                 log("Operation successful")
             else:
