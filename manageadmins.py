@@ -219,6 +219,15 @@ def getSamlRoles(p_apiKey, p_organizationId):
     success, errors, headers, response = merakiRequest(p_apiKey, "GET", endpoint, p_verbose=FLAG_REQUEST_VERBOSE)    
     return success, errors, headers, response 
 
+def createSamlRoles(p_apiKey, p_organizationId, p_role, p_privilege):
+    endpoint = "/organizations/%s/samlRoles" % p_organizationId
+    body = { 
+        "role": p_role,
+        "orgAccess": p_privilege
+        }
+    success, errors, headers, response = merakiRequest(p_apiKey, "POST", endpoint, p_requestBody=body, p_verbose=FLAG_REQUEST_VERBOSE)    
+    return success, errors, headers, response
+
 def log(text, filePath=None):
     logString = "%s -- %s" % (datetime.datetime.now(), text)
     print(logString)
@@ -248,7 +257,16 @@ def adminIdForEmail(p_adminList, p_adminEmail):
 
     return (None)
     
+def roleIdForSAML(p_roleList, p_roleSaml):
+    #returns role id associated with an email or None, if it is not found
     
+    if not p_roleList is None:
+        for role in p_roleList:
+            if role['role'] == p_roleSaml:
+                return (role['id'])
+
+    return (None)
+
 def filterOrgList(p_orgList, p_filter):
     #tries to match a list of orgs to a name filter
     #   /all    all organizations
@@ -366,6 +384,27 @@ def cmdListSaml(p_apikey, p_orgList):
                 
     print(buffer)
 
+def cmdAddSaml(p_apikey, p_orgs, p_role, p_privilege):
+    #creates a SAML role in all orgs in scope
+    
+    if p_privilege not in ['full', 'read-only']:
+        killScript('Unsupported privilege level "%s"' % p_privilege)
+        
+    if p_orgs is None:
+        return
+    
+    for org in p_orgs:
+        success, errors, headers, orgRoles = getSamlRoles(p_apikey, org["id"])
+        roleId   = roleIdForSAML(orgRoles, p_role)
+        if not roleId is None:
+            log('Skipping org "%s". Role already exists' % org["name"])
+        else:
+            success, errors, headers, response = createSamlRoles(p_apikey, org["id"], p_role, p_privilege)
+            if success:
+                log("Operation successful")
+            else:
+                log("Operation failed")
+
 def main(argv):
     #initialize variables for command line arguments
     arg_apiKey      = ''
@@ -403,7 +442,7 @@ def main(argv):
         
     #fail invalid commands quickly, not to annoy user
     cleanCmd = arg_command.lower().strip()
-    if cleanCmd not in ['add', 'delete', 'find', 'list', 'list_saml']:
+    if cleanCmd not in ['add', 'delete', 'find', 'list', 'add_saml', 'list_saml']:
         killScript('Invalid command "%s"' % cleanCmd)
         
     if arg_admin == '' and cleanCmd not in ['list', 'list_saml']:
@@ -435,6 +474,8 @@ def main(argv):
         cmdFind(arg_apiKey, matchedOrgs, arg_admin)
     elif cleanCmd == 'list':
         cmdList(arg_apiKey, matchedOrgs)
+    elif cleanCmd == 'add_saml':
+        cmdAddSaml(arg_apiKey, matchedOrgs, arg_admin, arg_privilege)
     elif cleanCmd == 'list_saml':
         cmdListSaml(arg_apiKey, matchedOrgs)
     
