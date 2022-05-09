@@ -228,8 +228,8 @@ def createOrganizationSamlRole(p_apiKey, p_organizationId, p_role, p_privilege):
     success, errors, headers, response = merakiRequest(p_apiKey, "POST", endpoint, p_requestBody=body, p_verbose=FLAG_REQUEST_VERBOSE)    
     return success, errors, headers, response
 
-def deleteOrganizationSamlRole(p_apiKey, p_organizationId, p_role):
-    endpoint = "/organizations/%s/samlRoles/%s" % (p_organizationId, p_role)
+def deleteOrganizationSamlRole(p_apiKey, p_organizationId, p_roleId):
+    endpoint = "/organizations/%s/samlRoles/%s" % (p_organizationId, p_roleId)
     success, errors, headers, response = merakiRequest(p_apiKey, "DELETE", endpoint, p_verbose=FLAG_REQUEST_VERBOSE)    
     return success, errors, headers, response
 
@@ -263,7 +263,7 @@ def adminIdForEmail(p_adminList, p_adminEmail):
     return (None)
     
 def roleIdForSAML(p_roleList, p_roleSaml):
-    #returns role id associated with an email or None, if it is not found
+    #returns role id associated with role or None, if it is not found
     
     if not p_roleList is None:
         for role in p_roleList:
@@ -422,7 +422,7 @@ def cmdDeleteSaml(p_apiKey, p_orgs, p_role):
         if roleId is None:
             log('Skipping org "%s". Role "%s" not found"' % (org["name"], p_role))
         else:            
-            success, errors, headers, response = deleteOrganizationSamlRole(p_apiKey, org["id"], p_role)
+            success, errors, headers, response = deleteOrganizationSamlRole(p_apiKey, org["id"], roleId)
             if success:
                 log("Operation successful")
             else:
@@ -473,7 +473,7 @@ def main(argv):
         
     if cleanCmd == 'add' and arg_name == '':
         killScript('Command "add" needs parameter -n <name>')
-        
+
     #set default values for optional arguments
     if arg_privilege == '':
         arg_privilege = 'full'                
