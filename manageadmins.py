@@ -228,6 +228,11 @@ def createOrganizationSamlRole(p_apiKey, p_organizationId, p_role, p_privilege):
     success, errors, headers, response = merakiRequest(p_apiKey, "POST", endpoint, p_requestBody=body, p_verbose=FLAG_REQUEST_VERBOSE)    
     return success, errors, headers, response
 
+def deleteOrganizationSamlRole(p_apiKey, p_organizationId, p_role):
+    endpoint = "/organizations/%s/samlRoles/%s" % (p_organizationId, p_role)
+    success, errors, headers, response = merakiRequest(p_apiKey, "DELETE", endpoint, p_verbose=FLAG_REQUEST_VERBOSE)    
+    return success, errors, headers, response
+
 def log(text, filePath=None):
     logString = "%s -- %s" % (datetime.datetime.now(), text)
     print(logString)
@@ -405,6 +410,24 @@ def cmdAddSaml(p_apikey, p_orgs, p_role, p_privilege):
             else:
                 log("Operation failed")
 
+def cmdDeleteSaml(p_apiKey, p_orgs, p_role):
+    #deletes an role from all orgs in scope
+
+    if p_orgs is None:
+        return
+
+    for org in p_orgs:
+        success, errors, headers, orgRoles = getOrganizationSamlRoles(p_apiKey, org["id"])
+        roleId   = roleIdForSAML(orgRoles, p_role)
+        if roleId is None:
+            log('Skipping org "%s". Role "%s" not found"' % (org["name"], p_role))
+        else:            
+            success, errors, headers, response = deleteOrganizationSamlRole(p_apiKey, org["id"], p_role)
+            if success:
+                log("Operation successful")
+            else:
+                log("Operation failed")      
+
 def main(argv):
     #initialize variables for command line arguments
     arg_apiKey      = ''
@@ -442,7 +465,7 @@ def main(argv):
         
     #fail invalid commands quickly, not to annoy user
     cleanCmd = arg_command.lower().strip()
-    if cleanCmd not in ['add', 'delete', 'find', 'list', 'add_saml', 'list_saml']:
+    if cleanCmd not in ['add', 'delete', 'find', 'list', 'add_saml', 'delete_saml', 'list_saml']:
         killScript('Invalid command "%s"' % cleanCmd)
         
     if arg_admin == '' and cleanCmd not in ['list', 'list_saml']:
@@ -476,6 +499,8 @@ def main(argv):
         cmdList(arg_apiKey, matchedOrgs)
     elif cleanCmd == 'add_saml':
         cmdAddSaml(arg_apiKey, matchedOrgs, arg_admin, arg_privilege)
+    elif cleanCmd == 'delete_saml':
+        cmdDeleteSaml(arg_apiKey, matchedOrgs, arg_admin)
     elif cleanCmd == 'list_saml':
         cmdListSaml(arg_apiKey, matchedOrgs)
     
